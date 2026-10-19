@@ -1,0 +1,184 @@
+// =========================================================
+// app.js — point d'entrée : navigation et branchement des écrans
+// =========================================================
+
+import * as store from './store.js';
+import * as srs from './srs.js';
+
+// Raccourci pour attraper un élément de la page.
+const $ = (selector) => document.querySelector(selector);
+
+// =========================================================
+// Navigation entre les 3 écrans
+// =========================================================
+
+const views = {
+  review: $('#view-review'),
+  cards: $('#view-cards'),
+  more: $('#view-more'),
+};
+let currentView = 'review';
+
+// Affiche un écran, cache les autres, et le met à jour.
+function showView(name) {
+  currentView = name;
+  for (const [key, el] of Object.entries(views)) el.hidden = key !== name;
+  for (const tab of document.querySelectorAll('.tab')) {
+    if (tab.dataset.view === name) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
+  }
+  if (name === 'review') renderReview();
+  views[name].scrollTop = 0;
+}
+
+for (const tab of document.querySelectorAll('.tab')) {
+  tab.addEventListener('click', () => showView(tab.dataset.view));
+}
+
+// =========================================================
+// Écran Réviser
+// =========================================================
+
+const flashcard = $('#flashcard');
+let current = null;     // la carte affichée
+let flipped = false;    // true quand la définition est visible
+let wakeTimer = null;   // réveil pour la prochaine carte en apprentissage
+
+// Met à jour le compteur du jour et la pastille de l'onglet.
+function renderCounters(now) {
+  const stats = srs.getStats(store.getCards(), store.getSettings(), now);
+  $('#due-count').textContent = stats.total;
+  $('#due-label').textContent = stats.total > 1 ? 'cartes à réviser aujourd\'hui' : 'carte à réviser aujourd\'hui';
+  const parts = [];
+  if (stats.reviews) parts.push(`${stats.reviews} révision${stats.reviews > 1 ? 's' : ''}`);
+  if (stats.newToday) parts.push(`${stats.newToday} nouvelle${stats.newToday > 1 ? 's' : ''}`);
+  $('#due-detail').textContent = parts.join(' · ');
+  const badge = $('#tab-badge');
+  badge.textContent = stats.total;
+  badge.hidden = stats.total === 0;
+}
+
+// Choisit la carte suivante et l'affiche (ou un message s'il n'y en a pas).
+function renderReview() {
+  const now = new Date();
+  const cards = store.getCards();
+  const settings = store.getSettings();
+  clearTimeout(wakeTimer);
+  renderCounters(now);
+
+  current = srs.nextCard(cards, settings, now);
+  const hasCard = Boolean(current);
+  $('#stage').hidden = !hasCard;
+  $('#review-empty').hidden = hasCard;
+  $('#show-bar').hidden = !hasCard;
+  $('#ratings').hidden = true;
+
+  if (hasCard) showCard(current);
+  else renderEmpty(cards, settings, now);
+}
+
+// Pose une carte côté « mot », sans animation de retournement, puis la fait apparaître.
+function showCard(card) {
+  flipped = false;
+  flashcard.classList.add('no-anim');
+  flashcard.classList.remove('flipped');
+  $('#card-word').textContent = card.word;
+  $('#card-word-back').textContent = card.word;
+  $('#card-definition').textContent = card.definition;
+  void flashcard.offsetWidth;            // force le navigateur à appliquer le changement tout de suite
+  flashcard.classList.remove('no-anim');
+
+  // Petite entrée en douceur de la nouvelle carte
+  flashcard.classList.remove('enter');
+  void flashcard.offsetWidth;
+  flashcard.classList.add('enter');
+  flashcard.setAttribute('aria-label', `Mot : ${card.word}. Touche pour voir la définition.`);
+}
+
+// Retourne la carte : mot -> définition (et inversement si on retouche).
+function flip() {
+  if (!current) return;
+  flipped = !flipped;
+  flashcard.classList.toggle('flipped', flipped);
+  if (flipped && $('#ratings').hidden) {
+    // Premier retournement : on calcule les intervalles et on montre les 4 boutons
+    const intervals = srs.previewIntervals(current, new Date());
+    for (const small of document.querySelectorAll('[data-interval]')) {
+      small.textContent = intervals[small.dataset.interval];
+    }
+    $('#show-bar').hidden = true;
+    $('#ratings').hidden = false;
+  }
+  flashcard.setAttribute('aria-label', flipped
+    ? `Définition : ${current.definition}`
+    : `Mot : ${current.word}. Touche pour voir la définition.`);
+}
+
+// Enregistre la note donnée à la carte, puis passe à la suivante.
+function rateCurrent(rating) {
+  if (!current || $('#ratings').hidden) return;
+  store.updateCard(current.id, srs.rate(current, rating, new Date()));
+  renderReview();
+}
+
+// Message quand il n'y a rien à réviser maintenant.
+function renderEmpty(cards, settings, now) {
+  const title = $('#empty-title');
+  const text = $('#empty-text');
+  $('#btn-empty-add').hidden = cards.length > 0;
+
+  if (cards.length === 0) {
+    title.textContent = 'Aucune carte';
+    text.textContent = 'Ajoute ta première carte, ou importe une liste depuis l\'onglet Plus.';
+    return;
+  }
+
+  const next = srs.nextDueDate(cards);
+  const stats = srs.getStats(cards, settings, now);
+  if (stats.total > 0 && next) {
+    // Il reste des cartes en apprentissage plus tard aujourd'hui : on se réveillera à l'heure
+    const wait = next - now;
+    title.textContent = 'Petite pause';
+    text.textContent = `Prochaine carte dans ${srs.formatDuration(wait)}.`;
+    wakeTimer = setTimeout(renderReview, Math.max(1000, wait - 20 * 60 * 1000));
+    return;
+  }
+
+  title.textContent = 'Fini pour aujourd\'hui';
+  const remainingNew = stats.newCards > 0 && srs.newQuotaLeft(cards, settings, now) === 0;
+  if (remainingNew) {
+    text.textContent = `Tu as vu tes ${settings.newPerDay} nouvelles cartes du jour. `
+      + 'Tu peux changer ce nombre dans l\'onglet Plus.';
+  } else if (next) {
+    text.textContent = `Prochaine révision : ${srs.describeDay(next, now)}.`;
+  } else {
+    text.textContent = 'Ajoute de nouvelles cartes pour continuer.';
+  }
+}
+
+flashcard.addEventListener('click', flip);
+$('#btn-show').addEventListener('click', flip);
+for (const btn of document.querySelectorAll('.rate')) {
+  btn.addEventListener('click', () => rateCurrent(Number(btn.dataset.rating)));
+}
+
+// Raccourcis clavier (utile sur ordinateur) : Espace = retourner, 1 à 4 = noter.
+document.addEventListener('keydown', (event) => {
+  if (currentView !== 'review' || document.querySelector('dialog[open]')) return;
+  if (event.target.matches('input, textarea')) return;
+  if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); flip(); }
+  if (['1', '2', '3', '4'].includes(event.key)) rateCurrent(Number(event.key));
+});
+
+// Quand on revient sur l'app (elle était en arrière-plan), on rafraîchit
+// la carte du moment, sauf si une définition est déjà affichée.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentView === 'review' && !flipped) renderReview();
+});
+
+// =========================================================
+// Démarrage
+// =========================================================
+
+store.askPersistentStorage();
+showView('review');
