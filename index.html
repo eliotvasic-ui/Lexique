@@ -148,7 +148,8 @@
   <!-- Fenêtre d'ajout / modification d'une carte -->
   <dialog class="sheet" id="card-dialog" aria-labelledby="dialog-title">
     <form method="dialog" id="card-form">
-      <h2 id="dialog-title">Nouvelle carte</h2>
+      <!-- autofocus sur le titre : à l'ouverture, le clavier ne surgit pas tout seul -->
+      <h2 id="dialog-title" tabindex="-1" autofocus>Nouvelle carte</h2>
       <label class="field">
         <span>Mot</span>
         <input class="input" id="field-word" name="word" type="text" required

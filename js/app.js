@@ -27,8 +27,15 @@ function showView(name) {
     if (tab.dataset.view === name) tab.setAttribute('aria-current', 'page');
     else tab.removeAttribute('aria-current');
   }
-  if (name === 'review') renderReview();
+  refresh();
   views[name].scrollTop = 0;
+}
+
+// Redessine l'écran affiché (après un changement d'onglet ou une modification des données).
+function refresh() {
+  if (currentView === 'review') renderReview();
+  else renderCounters(new Date());
+  if (currentView === 'cards') renderCards();
 }
 
 for (const tab of document.querySelectorAll('.tab')) {
@@ -175,6 +182,106 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && currentView === 'review' && !flipped) renderReview();
 });
+
+// =========================================================
+// Écran Cartes : liste, recherche, ajout / modification / suppression
+// =========================================================
+
+// Texte simplifié pour la recherche : minuscules et sans accents (« reception » trouve « Réception »).
+const searchKey = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// Affiche la liste des cartes, filtrée par la recherche et triée par ordre alphabétique.
+function renderCards() {
+  const cards = store.getCards();
+  const query = searchKey($('#search').value.trim());
+  const now = new Date();
+
+  const shown = cards
+    .filter((c) => !query || searchKey(c.word).includes(query) || searchKey(c.definition).includes(query))
+    .sort((a, b) => a.word.localeCompare(b.word, 'fr', { sensitivity: 'base' }));
+
+  $('#cards-count').textContent = `${cards.length} carte${cards.length > 1 ? 's' : ''}`;
+  $('#card-list').replaceChildren(...shown.map((card) => cardItem(card, now)));
+
+  const empty = $('#cards-empty');
+  empty.hidden = shown.length > 0;
+  empty.textContent = cards.length ? 'Aucune carte ne correspond à ta recherche.' : 'Pas encore de carte.';
+}
+
+// Une ligne de la liste. On passe par textContent (jamais innerHTML) :
+// un texte importé ne peut donc pas injecter de code dans la page.
+function cardItem(card, now) {
+  const li = document.createElement('li');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'card-item';
+
+  const top = document.createElement('span');
+  top.className = 'card-item-top';
+  const word = document.createElement('span');
+  word.className = 'card-item-word';
+  word.textContent = card.word;
+  const due = document.createElement('span');
+  due.className = 'card-item-due';
+  due.textContent = srs.describeDue(card, now);
+  top.append(word, due);
+
+  const def = document.createElement('span');
+  def.className = 'card-item-def';
+  def.textContent = card.definition.split('\n')[0];
+
+  button.append(top, def);
+  button.addEventListener('click', () => openEditor(card));
+  li.append(button);
+  return li;
+}
+
+// ---------- Fenêtre d'ajout / modification ----------
+
+const dialog = $('#card-dialog');
+let editingId = null;   // null = nouvelle carte, sinon id de la carte modifiée
+
+function openEditor(card = null) {
+  editingId = card ? card.id : null;
+  $('#dialog-title').textContent = card ? 'Modifier la carte' : 'Nouvelle carte';
+  $('#field-word').value = card ? card.word : '';
+  $('#field-definition').value = card ? card.definition : '';
+  $('#field-progress').textContent = card ? srs.describeProgress(card) : '';
+  $('#btn-delete').hidden = !card;
+  dialog.showModal();
+  // Nouvelle carte : on ouvre directement le clavier sur le champ « Mot »
+  if (!card) $('#field-word').focus();
+}
+
+$('#card-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const word = $('#field-word').value.trim();
+  const definition = $('#field-definition').value.trim();
+  if (!word || !definition) return;
+
+  // Même mot déjà présent ? On demande avant de créer un doublon.
+  const twin = store.getCards().find((c) => c.id !== editingId
+    && store.normalizeWord(c.word) === store.normalizeWord(word));
+  if (twin && !confirm(`« ${twin.word} » existe déjà. Enregistrer quand même ?`)) return;
+
+  if (editingId) store.updateCard(editingId, { word, definition });   // la progression est gardée
+  else store.addCards([{ word, definition, fsrs: srs.newSchedule() }]);
+  dialog.close();
+  refresh();
+});
+
+$('#btn-delete').addEventListener('click', () => {
+  const card = store.getCard(editingId);
+  if (!card || !confirm(`Supprimer « ${card.word} » et sa progression ?`)) return;
+  store.deleteCard(card.id);
+  dialog.close();
+  refresh();
+});
+
+$('#btn-cancel').addEventListener('click', () => dialog.close());
+$('#btn-add').addEventListener('click', () => openEditor());
+$('#btn-empty-add').addEventListener('click', () => openEditor());
+$('#search').addEventListener('input', renderCards);
 
 // =========================================================
 // Démarrage

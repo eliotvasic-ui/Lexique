@@ -368,6 +368,7 @@ textarea.input { resize: vertical; min-height: 110px; }
   box-shadow: var(--shadow);
 }
 .sheet::backdrop { background: rgb(0 0 0 / 0.45); }
+.sheet h2:focus { outline: none; }
 .sheet[open] { animation: sheet-in 0.22s ease-out; }
 .field { display: block; margin-top: 14px; }
 .field > span { display: block; margin-bottom: 6px; font-size: 15px; font-weight: 600; color: var(--muted); }
