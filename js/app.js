@@ -174,7 +174,7 @@ for (const btn of document.querySelectorAll('.rate')) {
 // Raccourcis clavier (utile sur ordinateur) : Espace = retourner, 1 à 4 = noter.
 document.addEventListener('keydown', (event) => {
   if (currentView !== 'review' || document.querySelector('dialog[open]')) return;
-  if (event.target.matches('input, textarea')) return;
+  if (event.target.closest('input, textarea, button')) return;   // laisse ces éléments réagir normalement
   if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); flip(); }
   if (['1', '2', '3', '4'].includes(event.key)) rateCurrent(Number(event.key));
 });
@@ -190,7 +190,7 @@ document.addEventListener('visibilitychange', () => {
 // =========================================================
 
 // Texte simplifié pour la recherche : minuscules et sans accents (« reception » trouve « Réception »).
-const searchKey = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const searchKey = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 // Affiche la liste des cartes, filtrée par la recherche et triée par ordre alphabétique.
 function renderCards() {

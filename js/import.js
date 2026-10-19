@@ -12,7 +12,7 @@ const SEPARATORS = { tab: '\t', comma: ',', semicolon: ';', space: ' ', pipe: '|
 
 export function parseText(rawText) {
   // Retours à la ligne Windows/Mac -> \n, et retrait de l'éventuel BOM en tout début de fichier
-  const text = rawText.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  const text = rawText.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   const header = readAnkiHeader(text);
 
   // Format Anki si l'en-tête le dit, ou si une ligne de données contient une tabulation
@@ -115,7 +115,7 @@ function cleanField(value, isHtml) {
   let text = isHtml ? htmlToText(value) : value;
   text = text
     .replace(/\[sound:[^\]]*\]/g, '')     // [sound:fichier.mp3] d'Anki
-    .replace(/ /g, ' ');            // espace insécable -> espace normal
+    .replace(/\u00a0/g, ' ');            // espace insécable -> espace normal
   return text
     .split('\n').map((line) => line.trim()).join('\n')
     .replace(/\n{3,}/g, '\n\n')
