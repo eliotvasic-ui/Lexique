@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <!-- viewport-fit=cover : la page occupe tout l'écran, y compris sous l'encoche -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lexique</title>
+  <meta name="description" content="Révision de définitions par répétition espacée">
+  <meta name="color-scheme" content="light dark">
+  <!-- Couleur de la barre d'état : claire ou sombre selon le réglage du téléphone -->
+  <meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)">
+  <!-- Ouverture en plein écran depuis l'écran d'accueil de l'iPhone -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Lexique">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ===================== Écran 1 : Réviser ===================== -->
+    <section id="view-review" class="view" aria-labelledby="t-review">
+      <header class="view-header">
+        <h1 id="t-review">Réviser</h1>
+        <p class="due"><strong id="due-count">0</strong> <span id="due-label">à réviser aujourd'hui</span></p>
+        <p class="due-detail" id="due-detail"></p>
+      </header>
+
+      <!-- La carte : face avant = mot, face arrière = définition -->
+      <div class="stage" id="stage" hidden>
+        <div class="flashcard" id="flashcard" role="button" tabindex="0" aria-label="Retourner la carte">
+          <div class="flashcard-inner">
+            <div class="face face-front">
+              <p class="face-word" id="card-word"></p>
+              <p class="face-hint">Touche pour voir la définition</p>
+            </div>
+            <div class="face face-back">
+              <p class="face-word face-word-small" id="card-word-back"></p>
+              <p class="face-definition" id="card-definition"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Avant de retourner : un gros bouton à portée de pouce -->
+      <div class="actions" id="show-bar" hidden>
+        <button class="btn btn-primary btn-block" id="btn-show" type="button">Voir la définition</button>
+      </div>
+
+      <!-- Après avoir retourné : les 4 notes FSRS -->
+      <div class="ratings" id="ratings" hidden>
+        <button class="rate rate-again" type="button" data-rating="1">À revoir<small data-interval="1"></small></button>
+        <button class="rate rate-hard" type="button" data-rating="2">Difficile<small data-interval="2"></small></button>
+        <button class="rate rate-good" type="button" data-rating="3">Bien<small data-interval="3"></small></button>
+        <button class="rate rate-easy" type="button" data-rating="4">Facile<small data-interval="4"></small></button>
+      </div>
+
+      <!-- Messages quand il n'y a rien à afficher -->
+      <div class="empty" id="review-empty" hidden>
+        <p class="empty-title" id="empty-title"></p>
+        <p class="empty-text" id="empty-text"></p>
+        <button class="btn btn-primary" id="btn-empty-add" type="button" hidden>Ajouter une carte</button>
+      </div>
+    </section>
+
+    <!-- ===================== Écran 2 : Cartes ===================== -->
+    <section id="view-cards" class="view" aria-labelledby="t-cards" hidden>
+      <header class="view-header">
+        <h1 id="t-cards">Cartes</h1>
+        <p class="due" id="cards-count"></p>
+      </header>
+      <button class="btn btn-primary btn-block" id="btn-add" type="button">+ Ajouter une carte</button>
+      <input class="input search" id="search" type="search" placeholder="Rechercher un mot ou une définition"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+      <ul class="card-list" id="card-list"></ul>
+      <p class="empty-text" id="cards-empty" hidden></p>
+    </section>
+
+    <!-- ===================== Écran 3 : Plus ===================== -->
+    <section id="view-more" class="view" aria-labelledby="t-more" hidden>
+      <header class="view-header">
+        <h1 id="t-more">Plus</h1>
+      </header>
+
+      <div class="panel">
+        <h2>Importer des cartes</h2>
+        <p class="help">Export texte d'Anki (« Notes en texte brut ») ou une carte par ligne :
+          <code>mot ; définition</code></p>
+        <textarea class="input" id="import-text" rows="5"
+                  placeholder="chien ; animal domestique qui aboie&#10;chat ; petit félin domestique"></textarea>
+        <div class="row">
+          <button class="btn btn-primary" id="btn-import-text" type="button">Importer le texte</button>
+          <label class="btn btn-secondary" for="import-file">Choisir un fichier…</label>
+          <input class="visually-hidden" id="import-file" type="file">
+        </div>
+        <p class="result" id="import-result" role="status"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Sauvegarde</h2>
+        <p class="help">Tes cartes et ta progression sont stockées uniquement sur ce téléphone.
+          Exporte régulièrement un fichier de sauvegarde (OneDrive, Drive, Fichiers…).</p>
+        <p class="help" id="backup-info"></p>
+        <div class="row">
+          <button class="btn btn-primary" id="btn-export" type="button">Exporter (JSON)</button>
+          <label class="btn btn-secondary" for="restore-file">Restaurer…</label>
+          <input class="visually-hidden" id="restore-file" type="file">
+        </div>
+        <p class="result" id="backup-result" role="status"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Réglages</h2>
+        <label class="setting" for="new-per-day">
+          <span>Nouvelles cartes par jour</span>
+          <input class="input input-number" id="new-per-day" type="number" inputmode="numeric"
+                 min="0" max="9999" step="1">
+        </label>
+      </div>
+
+      <p class="footnote">Lexique · planification <a href="https://github.com/open-spaced-repetition/ts-fsrs">FSRS</a></p>
+    </section>
+
+    <!-- ===================== Barre d'onglets ===================== -->
+    <nav class="tabbar" aria-label="Navigation">
+      <button class="tab" type="button" data-view="review" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M8 2.5h9a2.5 2.5 0 0 1 2.5 2.5"/></svg>
+        <span>Réviser</span>
+        <span class="badge" id="tab-badge" hidden></span>
+      </button>
+      <button class="tab" type="button" data-view="cards">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+        <span>Cartes</span>
+      </button>
+      <button class="tab" type="button" data-view="more">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>
+        <span>Plus</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Fenêtre d'ajout / modification d'une carte -->
+  <dialog class="sheet" id="card-dialog" aria-labelledby="dialog-title">
+    <form method="dialog" id="card-form">
+      <h2 id="dialog-title">Nouvelle carte</h2>
+      <label class="field">
+        <span>Mot</span>
+        <input class="input" id="field-word" name="word" type="text" required
+               autocomplete="off" autocapitalize="none">
+      </label>
+      <label class="field">
+        <span>Définition</span>
+        <textarea class="input" id="field-definition" name="definition" rows="5" required></textarea>
+      </label>
+      <p class="help" id="field-progress"></p>
+      <div class="row">
+        <button class="btn btn-secondary" type="button" id="btn-cancel">Annuler</button>
+        <button class="btn btn-primary" type="submit" id="btn-save">Enregistrer</button>
+      </div>
+      <button class="btn btn-danger btn-block" type="button" id="btn-delete" hidden>Supprimer la carte</button>
+    </form>
+  </dialog>
+</body>
+</html>

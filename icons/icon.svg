@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Icône de Lexique : deux cartes sur fond indigo.
+       Le dessin reste dans le cercle central (80 %) pour l'icône « maskable ». -->
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#4338ca"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#fond)"/>
+  <!-- Carte de derrière, inclinée -->
+  <rect x="150" y="126" width="212" height="260" rx="28" fill="#ffffff" fill-opacity="0.35"
+        transform="rotate(-10 256 256)"/>
+  <!-- Carte de devant -->
+  <rect x="150" y="126" width="212" height="260" rx="28" fill="#ffffff"/>
+  <!-- Le « mot » (barre épaisse) puis la « définition » (lignes fines) -->
+  <rect x="184" y="170" width="112" height="26" rx="13" fill="#4338ca"/>
+  <rect x="184" y="230" width="144" height="12" rx="6" fill="#c7c9f5"/>
+  <rect x="184" y="262" width="144" height="12" rx="6" fill="#c7c9f5"/>
+  <rect x="184" y="294" width="96" height="12" rx="6" fill="#c7c9f5"/>
+</svg>

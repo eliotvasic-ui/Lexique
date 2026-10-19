@@ -1,0 +1,385 @@
+/* =========================================================
+   Lexique — styles
+   Mobile d'abord : tout est pensé pour un iPhone tenu à une main.
+   ========================================================= */
+
+/* ---------- Couleurs (thème clair par défaut) ---------- */
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --surface-2: #ecebe6;
+  --text: #1c1c1e;
+  --muted: #6e6e73;
+  --border: #dddcd6;
+  --accent: #4f46e5;
+  --accent-text: #ffffff;
+  --accent-soft: #e8e7fd;
+  --danger: #c62828;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.08);
+
+  /* Couleurs des 4 boutons de note : texte / fond */
+  --again: #c62828; --again-bg: #fde8e8;
+  --hard: #a35f00;  --hard-bg: #fdf0dc;
+  --good: #1b7f45;  --good-bg: #e2f4e8;
+  --easy: #2459b8;  --easy-bg: #e3ecfb;
+
+  --radius: 16px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light dark;
+}
+
+/* ---------- Thème sombre : suit automatiquement le réglage du téléphone ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111113;
+    --surface: #1c1c1f;
+    --surface-2: #26262a;
+    --text: #f2f2f4;
+    --muted: #9a9aa2;
+    --border: #303036;
+    --accent: #8b8cf8;
+    --accent-text: #111113;
+    --accent-soft: #2a2a4a;
+    --danger: #ff6b6b;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+
+    --again: #ff8a8a; --again-bg: #3a1d1f;
+    --hard: #f5b454;  --hard-bg: #3a2d16;
+    --good: #6fd49a;  --good-bg: #173324;
+    --easy: #8fb4ff;  --easy-bg: #1a2742;
+  }
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* L'attribut « hidden » doit toujours gagner, même sur un élément en display:flex */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;              /* taille de texte par défaut d'iOS */
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;   /* pas de flash gris au toucher */
+}
+
+body { overscroll-behavior: none; }
+
+button, input, textarea, label.btn { font: inherit; color: inherit; }
+button, label.btn, .tab, .flashcard { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+
+h1 { font-size: 30px; line-height: 1.15; margin: 0; letter-spacing: -0.02em; }
+h2 { font-size: 19px; margin: 0 0 6px; }
+a { color: var(--accent); }
+code { font-size: 0.9em; background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
+
+/* Masqué à l'écran mais lisible par VoiceOver (pour les <input type=file>) */
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---------- Structure : écran + barre d'onglets ---------- */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;                /* repli pour les vieux navigateurs */
+  height: 100dvh;               /* hauteur réelle visible sur iPhone */
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.view {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Zones de sécurité : encoche/Dynamic Island en haut, bords arrondis sur les côtés */
+  padding: calc(env(safe-area-inset-top) + 16px)
+           calc(env(safe-area-inset-right) + 16px)
+           16px
+           calc(env(safe-area-inset-left) + 16px);
+}
+
+.view-header { margin-bottom: 16px; }
+.due { margin: 4px 0 0; color: var(--muted); }
+.due strong { color: var(--text); font-size: 1.15em; }
+.due-detail { margin: 0; color: var(--muted); font-size: 14px; }
+
+/* Barre d'onglets en bas, au-dessus de la barre d'accueil de l'iPhone */
+.tabbar {
+  flex: none;
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  padding: 4px calc(env(safe-area-inset-right) + 8px)
+           calc(env(safe-area-inset-bottom) + 4px)
+           calc(env(safe-area-inset-left) + 8px);
+}
+
+.tab {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 56px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tab svg {
+  width: 26px; height: 26px;
+  fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.tab[aria-current="page"] { color: var(--accent); }
+
+.badge {
+  position: absolute;
+  top: 2px; left: calc(50% + 8px);
+  min-width: 20px; height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 12px; line-height: 20px; text-align: center;
+}
+
+/* ---------- Boutons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+.btn:active { transform: scale(0.97); opacity: 0.85; }
+.btn-primary { background: var(--accent); color: var(--accent-text); }
+.btn-secondary { background: var(--surface-2); color: var(--text); }
+.btn-danger { background: none; color: var(--danger); margin-top: 8px; }
+.btn-block { display: flex; width: 100%; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.row > .btn { flex: 1 1 140px; }
+
+/* ---------- Champs de saisie ---------- */
+/* 17 px minimum : en dessous de 16 px, Safari zoome à chaque fois qu'on touche le champ */
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 17px;
+  outline: none;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+textarea.input { resize: vertical; min-height: 110px; }
+.input-number { width: 96px; text-align: center; }
+.search { margin: 12px 0; }
+
+/* ---------- Écran Réviser ---------- */
+#view-review { display: flex; flex-direction: column; }
+
+.stage {
+  flex: 1;
+  min-height: 260px;
+  display: flex;
+  margin-bottom: 16px;
+}
+
+/* La carte 3D : « perspective » donne la profondeur, « inner » tourne */
+.flashcard {
+  flex: 1;
+  perspective: 1200px;
+  cursor: pointer;
+  outline: none;
+}
+.flashcard.enter { animation: card-enter 0.32s ease-out; }
+
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+/* Pendant le changement de carte, on remet la carte à l'endroit sans animation
+   (sinon on verrait la définition de la carte suivante en plein retournement) */
+.flashcard.no-anim .flashcard-inner { transition: none; }
+
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 24px;
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+  overflow-y: auto;
+  /* Chaque face est invisible quand elle est de dos */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+/* Centrage vertical qui ne coupe pas le haut d'une longue définition */
+.face > :first-child { margin-top: auto; }
+.face > :last-child { margin-bottom: auto; }
+
+.face-back { transform: rotateY(180deg); }
+.flashcard:focus-visible .face { box-shadow: var(--shadow), 0 0 0 3px var(--accent); }
+
+.face-word {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.face-word-small { font-size: 20px; color: var(--muted); margin-bottom: 16px; }
+.face-hint { margin: 20px 0 0; color: var(--muted); font-size: 15px; }
+.face-definition {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.5;
+  white-space: pre-wrap;       /* garde les retours à la ligne de la définition */
+  overflow-wrap: anywhere;
+}
+
+.actions, .ratings { flex: none; }
+
+/* Les 4 boutons de note, côte à côte */
+.ratings {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.rate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 68px;
+  padding: 8px 2px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.rate:active { transform: scale(0.95); }
+.rate small { font-size: 12px; font-weight: 500; opacity: 0.85; margin-top: 2px; }
+.rate-again { color: var(--again); background: var(--again-bg); }
+.rate-hard  { color: var(--hard);  background: var(--hard-bg); }
+.rate-good  { color: var(--good);  background: var(--good-bg); }
+.rate-easy  { color: var(--easy);  background: var(--easy-bg); }
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 24px;
+}
+.empty-title { margin: 0; font-size: 22px; font-weight: 700; }
+.empty-text { margin: 0 0 8px; color: var(--muted); }
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- Écran Cartes ---------- */
+.card-list { list-style: none; margin: 0; padding: 0; }
+.card-item {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+.card-item:active { background: var(--surface-2); }
+.card-item-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.card-item-word { font-weight: 650; overflow-wrap: anywhere; }
+.card-item-due { flex: none; font-size: 13px; color: var(--muted); }
+.card-item-def {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Écran Plus ---------- */
+.panel {
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.help { margin: 0 0 10px; color: var(--muted); font-size: 15px; }
+.result { margin: 10px 0 0; font-size: 15px; font-weight: 600; }
+.result:empty { display: none; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.footnote { text-align: center; color: var(--muted); font-size: 13px; }
+
+/* ---------- Fenêtre d'édition ---------- */
+/* Placée en haut de l'écran : elle reste visible au-dessus du clavier de l'iPhone */
+.sheet {
+  width: calc(100% - 24px);
+  max-width: 600px;
+  margin: calc(env(safe-area-inset-top) + 12px) auto auto;
+  padding: 20px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.sheet::backdrop { background: rgb(0 0 0 / 0.45); }
+.sheet[open] { animation: sheet-in 0.22s ease-out; }
+.field { display: block; margin-top: 14px; }
+.field > span { display: block; margin-bottom: 6px; font-size: 15px; font-weight: 600; color: var(--muted); }
+.sheet .help { margin-top: 10px; }
+
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- Moins d'animations si l'iPhone le demande (Accessibilité > Mouvement) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .flashcard-inner { transition: none; }
+  .flashcard.enter, .sheet[open] { animation: none; }
+}
