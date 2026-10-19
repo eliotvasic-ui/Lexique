@@ -426,6 +426,29 @@ $('#new-per-day').addEventListener('change', (event) => {
 });
 
 // =========================================================
+// Hors ligne : enregistrement du service worker (sw.js)
+// =========================================================
+
+if ('serviceWorker' in navigator) {
+  // updateViaCache: 'none' : le navigateur revérifie sw.js sur le serveur à chaque fois
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then((registration) => {
+      // Au retour sur l'app, on regarde si une nouvelle version a été publiée
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') registration.update().catch(() => {});
+      });
+    })
+    .catch((err) => console.warn('Service worker non installé', err));
+
+  // Une nouvelle version vient de prendre la main : on recharge pour l'afficher
+  // (sauf au tout premier lancement, où il n'y avait pas encore de version précédente).
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) location.reload();
+  });
+}
+
+// =========================================================
 // Démarrage
 // =========================================================
 
