@@ -4,6 +4,7 @@
 
 import * as store from './store.js';
 import * as srs from './srs.js';
+import * as importer from './import.js';
 
 // Raccourci pour attraper un élément de la page.
 const $ = (selector) => document.querySelector(selector);
@@ -36,6 +37,7 @@ function refresh() {
   if (currentView === 'review') renderReview();
   else renderCounters(new Date());
   if (currentView === 'cards') renderCards();
+  if (currentView === 'more') renderMore();
 }
 
 for (const tab of document.querySelectorAll('.tab')) {
@@ -282,6 +284,146 @@ $('#btn-cancel').addEventListener('click', () => dialog.close());
 $('#btn-add').addEventListener('click', () => openEditor());
 $('#btn-empty-add').addEventListener('click', () => openEditor());
 $('#search').addEventListener('input', renderCards);
+
+// =========================================================
+// Écran Plus : import, sauvegarde, réglages
+// =========================================================
+
+// Remplit l'écran avec les valeurs actuelles.
+function renderMore() {
+  const settings = store.getSettings();
+  $('#new-per-day').value = settings.newPerDay;
+  $('#backup-info').textContent = `Dernière sauvegarde : ${describeLastBackup(settings.lastBackup)}.`;
+}
+
+function describeLastBackup(iso) {
+  if (!iso) return 'jamais';
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
+  if (days < 1) return 'aujourd\'hui';
+  if (days === 1) return 'hier';
+  return `il y a ${days} jours`;
+}
+
+const plural = (n, word) => `${n} ${word}${n > 1 ? 's' : ''}`;
+
+// ---------- Import texte (Anki ou liste) ----------
+
+// Ajoute les cartes lues en ignorant les mots déjà présents. Renvoie le message de bilan.
+function importText(text) {
+  if (text.trim().startsWith('{')) {
+    return 'Ce fichier ressemble à une sauvegarde JSON : utilise plutôt « Restaurer… ».';
+  }
+  const { entries, skipped } = importer.parseText(text);
+  if (!entries.length) {
+    return 'Aucune carte trouvée. Format attendu : une carte par ligne, « mot ; définition », '
+      + 'ou un export texte d\'Anki.';
+  }
+
+  // Doublons : déjà dans le téléphone, ou en double dans le fichier lui-même
+  const known = new Set(store.getCards().map((c) => store.normalizeWord(c.word)));
+  const fresh = [];
+  for (const entry of entries) {
+    const key = store.normalizeWord(entry.word);
+    if (known.has(key)) continue;
+    known.add(key);
+    fresh.push({ ...entry, fsrs: srs.newSchedule() });
+  }
+  store.addCards(fresh);
+
+  const duplicates = entries.length - fresh.length;
+  const parts = [`${plural(fresh.length, 'carte')} ajoutée${fresh.length > 1 ? 's' : ''}`];
+  if (duplicates) parts.push(`${plural(duplicates, 'doublon')} ignoré${duplicates > 1 ? 's' : ''}`);
+  if (skipped) parts.push(`${plural(skipped, 'ligne')} illisible${skipped > 1 ? 's' : ''}`);
+  return `${parts.join(' · ')}.`;
+}
+
+$('#btn-import-text').addEventListener('click', () => {
+  const textarea = $('#import-text');
+  if (!textarea.value.trim()) return;
+  $('#import-result').textContent = importText(textarea.value);
+  textarea.value = '';
+  renderCounters(new Date());
+});
+
+// Pas d'attribut « accept » sur les <input type=file> : sur iPhone, il grise parfois
+// des fichiers .txt ou .json pourtant valides.
+$('#import-file').addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  event.target.value = '';              // permet de rechoisir le même fichier plus tard
+  if (!file) return;
+  $('#import-result').textContent = importText(await file.text());
+  renderCounters(new Date());
+});
+
+// ---------- Sauvegarde JSON ----------
+
+$('#btn-export').addEventListener('click', async () => {
+  const json = importer.buildBackup(store.exportData());
+  const date = new Date().toISOString().slice(0, 10);
+  const file = new File([json], `lexique-${date}.json`, { type: 'application/json' });
+
+  // Sur iPhone : feuille de partage (Enregistrer dans Fichiers, OneDrive, Drive…).
+  // Ailleurs : simple téléchargement.
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+    } catch (err) {
+      if (err.name === 'AbortError') return;     // partage annulé : rien n'a été enregistré
+      download(file);
+    }
+  } else {
+    download(file);
+  }
+  store.updateSettings({ lastBackup: new Date().toISOString() });
+  $('#backup-result').textContent = `Sauvegarde exportée (${plural(store.getCards().length, 'carte')}).`;
+  renderMore();
+});
+
+// Téléchargement classique via un lien temporaire.
+function download(file) {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+$('#restore-file').addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const result = $('#backup-result');
+  try {
+    const backup = importer.parseBackup(await file.text());
+    const current = store.getCards().length;
+    const message = `Remplacer les cartes du téléphone (${plural(current, 'carte')}) par celles de la `
+      + `sauvegarde (${plural(backup.cards.length, 'carte')}) ? La progression actuelle sera perdue.`;
+    if (current > 0 && !confirm(message)) return;
+    store.replaceAll(backup);
+    result.textContent = `Sauvegarde restaurée : ${plural(backup.cards.length, 'carte')}.`;
+    refresh();
+  } catch (err) {
+    result.textContent = err.message;
+  }
+});
+
+// ---------- Réglages ----------
+
+$('#new-per-day').addEventListener('change', (event) => {
+  const value = Math.round(Number(event.target.value));
+  // Champ vidé ou invalide : on garde l'ancienne valeur
+  if (event.target.value === '' || !Number.isFinite(value)) {
+    event.target.value = store.getSettings().newPerDay;
+    return;
+  }
+  const newPerDay = Math.min(9999, Math.max(0, value));
+  store.updateSettings({ newPerDay });
+  event.target.value = newPerDay;
+  renderCounters(new Date());
+});
 
 // =========================================================
 // Démarrage

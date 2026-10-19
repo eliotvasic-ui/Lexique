@@ -176,7 +176,7 @@ code { font-size: 0.9em; background: var(--surface-2); padding: 1px 6px; border-
 .btn-block { display: flex; width: 100%; }
 
 .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-.row > .btn { flex: 1 1 140px; }
+.row > .btn { flex: 1 1 140px; white-space: nowrap; }   /* passe à la ligne entière plutôt que couper le texte */
 
 /* ---------- Champs de saisie ---------- */
 /* 17 px minimum : en dessous de 16 px, Safari zoome à chaque fois qu'on touche le champ */

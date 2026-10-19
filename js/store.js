@@ -117,7 +117,8 @@ export function replaceAll(newData) {
   data = {
     version: 1,
     settings: { ...DEFAULT_SETTINGS, ...newData.settings },
-    cards: newData.cards,
+    // une carte sans identifiant (fichier modifié à la main) en reçoit un
+    cards: newData.cards.map((card) => ({ ...card, id: card.id || newId(), introduced: card.introduced || null })),
   };
   save();
 }
